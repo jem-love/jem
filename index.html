@@ -395,15 +395,17 @@
         gem.setAttribute("stroke", gemStroke); gem.setAttribute("stroke-width", "1.5");
         gemGroup.appendChild(gem);
       } else if (shape === 'heart') {
-        const topY = cy - ry;
-        const bottomY = cy + ry;
-        const notchY = cy - ry * 0.35;
+        // 上下の山・先端が『指定した縦幅(l)・横幅(w)』の枠いっぱいにぴったり接する厳密計算
+        const topY = cy - ry;       // 最上部（左右の丸みの頂点）
+        const bottomY = cy + ry;    // 最下部（ハートの先端）
+        const r = rx / 2;           // 左右の円の半径
+        const notchY = topY + r;    // 中央のくぼみのY座標
 
         pathData = `M ${cx} ${notchY}
-                    C ${cx + rx * 0.5} ${topY - ry * 0.15}, ${cx + rx * 1.15} ${cy - ry * 0.5}, ${cx + rx} ${cy + ry * 0.1}
-                    C ${cx + rx * 0.8} ${cy + ry * 0.55}, ${cx} ${bottomY}, ${cx} ${bottomY}
-                    C ${cx} ${bottomY}, ${cx - rx * 0.8} ${cy + ry * 0.55}, ${cx - rx} ${cy + ry * 0.1}
-                    C ${cx - rx * 1.15} ${cy - ry * 0.5}, ${cx - rx * 0.5} ${topY - ry * 0.15}, ${cx} ${notchY} Z`;
+                    A ${r} ${r} 0 0 1 ${cx + rx} ${notchY}
+                    Q ${cx + rx} ${cy + ry * 0.4}, ${cx} ${bottomY}
+                    Q ${cx - rx} ${cy + ry * 0.4}, ${cx - rx} ${notchY}
+                    A ${r} ${r} 0 0 1 ${cx} ${notchY} Z`;
       } else if (shape === 'marquise') {
         pathData = `M ${cx} ${cy - ry}
                     Q ${cx + rx * 1.2} ${cy}, ${cx} ${cy + ry}
