@@ -111,6 +111,9 @@
       <select id="gem-shape" onchange="updateDrawing()">
         <option value="oval">オーバル (Oval)</option>
         <option value="round">ラウンド (Round)</option>
+        <option value="square">スクエア (Square)</option>
+        <option value="heart">ハート (Heart)</option>
+        <option value="marquise">マーキス (Marquise)</option>
         <option value="pear">ペアシェイプ (Pear)</option>
         <option value="trilliant">トリリアント (Trilliant)</option>
       </select>
@@ -123,20 +126,21 @@
       </div>
       <div class="form-group">
         <label>横幅 (mm)</label>
-        <input type="number" id="gem-width" value="6.0" step="0.1" oninput="updateDrawing()">
+        <input type="number" id="gem-width" value="4.0" step="0.1" oninput="updateDrawing()">
       </div>
       <div class="form-group">
         <label>高さ (mm)</label>
-        <input type="number" id="gem-height" value="4.0" step="0.1" oninput="updateDrawing()">
+        <input type="number" id="gem-height" value="3.0" step="0.1" oninput="updateDrawing()">
       </div>
     </div>
 
+    <!-- 傾き（360度対応） -->
     <div class="form-group">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
         <label style="margin-bottom: 0;">傾き (角度): <span id="angle-val">0</span>°</label>
         <button class="btn-toggle" style="padding: 2px 8px; font-size: 11px;" onclick="resetAngle()">0°に戻す</button>
       </div>
-      <input type="range" id="gem-angle" min="-90" max="90" value="0" step="1" oninput="onAngleChange(this.value)">
+      <input type="range" id="gem-angle" min="-180" max="180" value="0" step="1" oninput="onAngleChange(this.value)">
     </div>
 
     <div class="form-group">
@@ -380,6 +384,28 @@
         gem.setAttribute("fill", gemColor); gem.setAttribute("fill-opacity", "0.85");
         gem.setAttribute("stroke", gemStroke); gem.setAttribute("stroke-width", "1.5");
         gemGroup.appendChild(gem);
+      } else if (shape === 'square') {
+        const gem = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+        gem.setAttribute("x", cx - rx);
+        gem.setAttribute("y", cy - ry);
+        gem.setAttribute("width", pw);
+        gem.setAttribute("height", pl);
+        gem.setAttribute("rx", Math.min(pw, pl) * 0.05);
+        gem.setAttribute("ry", Math.min(pw, pl) * 0.05);
+        gem.setAttribute("fill", gemColor); gem.setAttribute("fill-opacity", "0.85");
+        gem.setAttribute("stroke", gemStroke); gem.setAttribute("stroke-width", "1.5");
+        gemGroup.appendChild(gem);
+      } else if (shape === 'heart') {
+        const topnotch = cy - ry * 0.35;
+        pathData = `M ${cx} ${topnotch}
+                    C ${cx + rx * 0.6} ${cy - ry * 1.2}, ${cx + rx * 1.3} ${cy - ry * 0.2}, ${cx + rx * 0.9} ${cy + ry * 0.3}
+                    C ${cx + rx * 0.6} ${cy + ry * 0.6}, ${cx} ${cy + ry}, ${cx} ${cy + ry}
+                    C ${cx} ${cy + ry}, ${cx - rx * 0.6} ${cy + ry * 0.6}, ${cx - rx * 0.9} ${cy + ry * 0.3}
+                    C ${cx - rx * 1.3} ${cy - ry * 0.2}, ${cx - rx * 0.6} ${cy - ry * 1.2}, ${cx} ${topnotch} Z`;
+      } else if (shape === 'marquise') {
+        pathData = `M ${cx} ${cy - ry}
+                    Q ${cx + rx * 1.2} ${cy}, ${cx} ${cy + ry}
+                    Q ${cx - rx * 1.2} ${cy}, ${cx} ${cy - ry} Z`;
       } else if (shape === 'pear') {
         pathData = `M ${cx} ${cy - ry}
                     C ${cx + rx * 1.2} ${cy + ry * 0.3}, ${cx + rx} ${cy + ry}, ${cx} ${cy + ry}
