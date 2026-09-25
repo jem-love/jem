@@ -126,11 +126,11 @@
       </div>
       <div class="form-group">
         <label>横幅 (mm)</label>
-        <input type="number" id="gem-width" value="4.0" step="0.1" oninput="updateDrawing()">
+        <input type="number" id="gem-width" value="6.0" step="0.1" oninput="updateDrawing()">
       </div>
       <div class="form-group">
         <label>高さ (mm)</label>
-        <input type="number" id="gem-height" value="3.0" step="0.1" oninput="updateDrawing()">
+        <input type="number" id="gem-height" value="4.0" step="0.1" oninput="updateDrawing()">
       </div>
     </div>
 
@@ -396,12 +396,16 @@
         gem.setAttribute("stroke", gemStroke); gem.setAttribute("stroke-width", "1.5");
         gemGroup.appendChild(gem);
       } else if (shape === 'heart') {
-        const topnotch = cy - ry * 0.35;
-        pathData = `M ${cx} ${topnotch}
-                    C ${cx + rx * 0.6} ${cy - ry * 1.2}, ${cx + rx * 1.3} ${cy - ry * 0.2}, ${cx + rx * 0.9} ${cy + ry * 0.3}
-                    C ${cx + rx * 0.6} ${cy + ry * 0.6}, ${cx} ${cy + ry}, ${cx} ${cy + ry}
-                    C ${cx} ${cy + ry}, ${cx - rx * 0.6} ${cy + ry * 0.6}, ${cx - rx * 0.9} ${cy + ry * 0.3}
-                    C ${cx - rx * 1.3} ${cy - ry * 0.2}, ${cx - rx * 0.6} ${cy - ry * 1.2}, ${cx} ${topnotch} Z`;
+        // 上端（山の頂点）と下端（先端）が正確に縦幅・横幅の枠いっぱいに接する描画計算
+        const topY = cy - ry;
+        const bottomY = cy + ry;
+        const notchY = cy - ry * 0.35;
+
+        pathData = `M ${cx} ${notchY}
+                    C ${cx + rx * 0.5} ${topY - ry * 0.15}, ${cx + rx * 1.15} ${cy - ry * 0.5}, ${cx + rx} ${cy + ry * 0.1}
+                    C ${cx + rx * 0.8} ${cy + ry * 0.55}, ${cx} ${bottomY}, ${cx} ${bottomY}
+                    C ${cx} ${bottomY}, ${cx - rx * 0.8} ${cy + ry * 0.55}, ${cx - rx} ${cy + ry * 0.1}
+                    C ${cx - rx * 1.15} ${cy - ry * 0.5}, ${cx - rx * 0.5} ${topY - ry * 0.15}, ${cx} ${notchY} Z`;
       } else if (shape === 'marquise') {
         pathData = `M ${cx} ${cy - ry}
                     Q ${cx + rx * 1.2} ${cy}, ${cx} ${cy + ry}
@@ -474,18 +478,3 @@
       const gemSideGroup = document.createElementNS("http://www.w3.org/2000/svg", "g");
       const gemCenterY = gemTopY + (ph / 2);
       gemSideGroup.setAttribute("transform", `rotate(${currentAngle}, ${cx}, ${gemCenterY})`);
-
-      const gemSide = document.createElementNS("http://www.w3.org/2000/svg", "path");
-      gemSide.setAttribute("d", sidePath);
-      gemSide.setAttribute("fill", gemColor); gemSide.setAttribute("fill-opacity", "0.85");
-      gemSide.setAttribute("stroke", gemStroke); gemSide.setAttribute("stroke-width", "1.5");
-      gemSideGroup.appendChild(gemSide);
-
-      g.appendChild(gemSideGroup);
-    }
-
-    stage.appendChild(g);
-  }
-</script>
-</body>
-</html>
