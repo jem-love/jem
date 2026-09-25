@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>実物大ジュエリー＆ルースシミュレーター</title>
+  
+  <!-- Android/PWAアプリ最適化メタタグ -->
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="theme-color" content="#ffffff">
+
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-tap-highlight-color: transparent; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f5f5f7; color: #333; overflow-x: hidden; }
+    
+    header { background: #fff; padding: 16px 16px 12px 16px; border-bottom: 1px solid #ddd; text-align: center; font-weight: bold; font-size: 16px; }
+    
+    /* 描画エリア */
+    #canvas-container {
+      width: 100%; height: 360px; background: #ffffff; position: relative;
+      display: flex; align-items: center; justify-content: center; overflow: hidden;
+      border-bottom: 1px solid #e0e0e0;
+      /* 方眼背景 */
+      background-image: linear-gradient(#f0f0f0 1px, transparent 1px), linear-gradient(90deg, #f0f0f0 1px, transparent 1px);
+      background-size: 10px 10px;
+    }
+    
+    svg { display: block; }
+
+    /* モード・視点切替ボタン */
+    .overlay-controls {
+      position: absolute; top: 12px; right: 12px; display: flex; flex-direction: column; gap: 8px; z-index: 10;
+    }
+    .btn-toggle {
+      background: rgba(255, 255, 255, 0.95); border: 1px solid #ccc; padding: 6px 12px;
+      border-radius: 20px; font-size: 12px; font-weight: bold; cursor: pointer; backdrop-filter: blur(4px);
+    }
+    .btn-toggle.active { background: #007aff; color: #fff; border-color: #007aff; }
+
+    /* コントロールパネル */
+    .panel { padding: 16px; max-width: 600px; margin: 0 auto; }
+    .tabs { display: flex; gap: 8px; border-bottom: 2px solid #ddd; margin-bottom: 16px; }
+    .tab { padding: 8px 16px; font-weight: bold; cursor: pointer; color: #666; border-bottom: 2px solid transparent; margin-bottom: -2px; }
+    .tab.active { color: #007aff; border-bottom-color: #007aff; }
+
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+
+    /* フォームパーツ */
+    .form-group { margin-bottom: 14px; }
+    label { font-size: 13px; font-weight: bold; color: #555; display: block; margin-bottom: 6px; }
+    select, input[type="number"], input[type="range"] {
+      width: 100%; padding: 10px 12px; border: 1px solid #ccc; border-radius: 8px; font-size: 14px; background: #fff;
+    }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+    .grid-4 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 6px; }
+
+    /* カラーパレット */
+    .color-picker {
+      display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-top: 6px;
+    }
+    .color-btn {
+      height: 38px; border-radius: 8px; border: 2px solid #ddd; cursor: pointer;
+      display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: bold;
+    }
+    .color-btn.active { border-color: #007aff; box-shadow: 0 0 0 2px rgba(0,122,255,0.3); }
+
+    /* キャリブレーション専用 */
+    .calib-box { background: #fff; padding: 20px 16px; border-radius: 12px; border: 1px solid #e0e0e0; text-align: center; }
+    .ruler-container {
+      margin: 25px auto 35px auto;
+      padding: 15px 0;
+      background: #fafafa;
+      border-radius: 8px;
+      border: 1px dashed #ccc;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .ruler-label { font-size: 11px; color: #007aff; font-weight: bold; margin-bottom: 6px; }
+    .ruler-line { height: 10px; background: #007aff; border-radius: 5px; position: relative; }
+  </style>
+</head>
+<body>
+
+<header>💎 ジュエリーシミュレーター</header>
+
+<div id="canvas-container">
+  <div class="overlay-controls">
+    <button class="btn-toggle active" id="view-front-btn" onclick="setView('front')">正面（真上）</button>
+    <button class="btn-toggle" id="view-side-btn" onclick="setView('side')">側面表示</button>
+    <button class="btn-toggle" id="reset-zoom-btn" onclick="resetZoom()">1:1 実物大に戻す</button>
+  </div>
+  
+  <svg id="stage" width="100%" height="100%"></svg>
+</div>
+
+<div class="panel">
+  <div class="tabs">
+    <div class="tab active" onclick="switchTab('gem')">💎 宝石</div>
+    <div class="tab" onclick="switchTab('ring')">💍 リング</div>
+    <div class="tab" onclick="switchTab('zoom')">🔍 ズーム</div>
+    <div class="tab" onclick="switchTab('calib')">📏 実物大補正</div>
+  </div>
+
+  <!-- 1. 宝石設定 -->
+  <div id="tab-gem" class="tab-content active">
+    <div class="form-group">
+      <label>シェイプ（形状）</label>
+      <select id="gem-shape" onchange="updateDrawing()">
+        <option value="oval">オーバル (Oval)</option>
+        <option value="round">ラウンド (Round)</option>
+        <option value="pear">ペアシェイプ (Pear)</option>
+        <option value="trilliant">トリリアント (Trilliant)</option>
+      </select>
+    </div>
+
+    <div class="grid-3">
+      <div class="form-group">
+        <label>縦幅 (mm)</label>
+        <input type="number" id="gem-length" value="8.0" step="0.1" oninput="updateDrawing()">
+      </div>
+      <div class="form-group">
+        <label>横幅 (mm)</label>
+        <input type="number" id="gem-width" value="6.0" step="0.1" oninput="updateDrawing()">
+      </div>
+      <div class="form-group">
+        <label>高さ (mm)</label>
+        <input type="number" id="gem-height" value="4.0" step="0.1" oninput="updateDrawing()">
+      </div>
+    </div>
+
+    <div class="form-group">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+        <label style="margin-bottom: 0;">傾き (角度): <span id="angle-val">0</span>°</label>
+        <button class="btn-toggle" style="padding: 2px 8px; font-size: 11px;" onclick="resetAngle()">0°に戻す</button>
+      </div>
+      <input type="range" id="gem-angle" min="-90" max="90" value="0" step="1" oninput="onAngleChange(this.value)">
+    </div>
+
+    <div class="form-group">
+      <label>宝石の色</label>
+      <select id="gem-color-select" onchange="selectColor(this.value)">
+        <option value="lightblue">水色</option>
+        <option value="blue">青</option>
+        <option value="green">緑</option>
+        <option value="lightgreen">黄緑</option>
+        <option value="yellow">黄</option>
+        <option value="orange">オレンジ</option>
+        <option value="red">赤</option>
+        <option value="pink">ピンク</option>
+        <option value="purple">紫</option>
+        <option value="white">白</option>
+      </select>
+
+      <div class="color-picker">
+        <div class="color-btn" style="background: #70d6ff; color: #000;" onclick="selectColor('lightblue')">水色</div>
+        <div class="color-btn" style="background: #0077b6; color: #fff;" onclick="selectColor('blue')">青</div>
+        <div class="color-btn" style="background: #2a9d8f; color: #fff;" onclick="selectColor('green')">緑</div>
+        <div class="color-btn" style="background: #9bdeac; color: #000;" onclick="selectColor('lightgreen')">黄緑</div>
+        <div class="color-btn" style="background: #ffee32; color: #000;" onclick="selectColor('yellow')">黄</div>
+        <div class="color-btn" style="background: #f4a261; color: #000;" onclick="selectColor('orange')">オレンジ</div>
+        <div class="color-btn" style="background: #e63946; color: #fff;" onclick="selectColor('red')">赤</div>
+        <div class="color-btn" style="background: #ff85a1; color: #000;" onclick="selectColor('pink')">ピンク</div>
+        <div class="color-btn" style="background: #9d4edd; color: #fff;" onclick="selectColor('purple')">紫</div>
+        <div class="color-btn" style="background: #ffffff; color: #333; border: 1px solid #ccc;" onclick="selectColor('white')">白</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. リング設定 -->
+  <div id="tab-ring" class="tab-content">
+    <div class="form-group">
+      <label>組み合わせ表示</label>
+      <select id="ring-enable" onchange="updateDrawing()">
+        <option value="false">ルース単体</option>
+        <option value="true">宝石 ＋ リング枠</option>
+      </select>
+    </div>
+    <div class="grid-4">
+      <div class="form-group">
+        <label>号数(JIS)</label>
+        <input type="number" id="ring-size" value="11" step="1" min="1" max="30" oninput="updateDrawing()">
+      </div>
+      <div class="form-group">
+        <label>幅 (mm)</label>
+        <input type="number" id="ring-width" value="2.0" step="0.1" oninput="updateDrawing()">
+      </div>
+      <div class="form-group">
+        <label>厚み (mm)</label>
+        <input type="number" id="ring-thick" value="1.5" step="0.1" oninput="updateDrawing()">
+      </div>
+      <div class="form-group">
+        <label>素材</label>
+        <select id="ring-material" onchange="updateDrawing()">
+          <option value="gold">K / 金</option>
+          <option value="silver">Pt / プラチナ</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. ズーム設定 -->
+  <div id="tab-zoom" class="tab-content">
+    <div class="form-group">
+      <label>倍率: <span id="zoom-val">100</span>%</label>
+      <input type="range" id="zoom-slider" min="50" max="250" value="100" oninput="onZoomChange(this.value)">
+    </div>
+    <div class="grid-2">
+      <button class="btn-toggle" onclick="setZoom(100)">100% (実物大)</button>
+      <button class="btn-toggle" onclick="setZoom(200)">200% (2倍拡大)</button>
+    </div>
+  </div>
+
+  <!-- 4. 実物大補正 -->
+  <div id="tab-calib" class="tab-content">
+    <div class="calib-box">
+      <p style="font-size: 13px; color: #444; line-height: 1.5;">画面に手元の定規を当て、下の青い線が**ピッタリ5cm（50mm）**になるようにスライダーで微調整してください。</p>
+      
+      <div class="ruler-container">
+        <span class="ruler-label">◀ 50 mm (5 cm) ▶</span>
+        <div id="ruler" class="ruler-line" style="width: 189px;"></div>
+      </div>
+      
+      <div class="form-group" style="margin-top: 20px;">
+        <label>微調整 (Px/mm 補正)</label>
+        <input type="range" id="calib-slider" min="2.0" max="8.0" step="0.01" value="3.78" oninput="onCalibChange(this.value)">
+      </div>
+      <button class="btn-toggle active" style="width: 100%; padding: 12px; font-size: 14px; margin-top: 10px;" onclick="saveCalibration()">補正値を保存</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  let pxPerMm = parseFloat(localStorage.getItem('gem_px_per_mm')) || 3.78;
+  let currentZoom = 1.0;
+  let currentView = 'front';
+  let selectedColorKey = 'lightblue';
+  let currentAngle = 0;
+
+  const colorMap = {
+    lightblue:  { fill: '#70d6ff', stroke: '#0077b6' },
+    blue:       { fill: '#0077b6', stroke: '#03045e' },
+    green:      { fill: '#2a9d8f', stroke: '#134e4a' },
+    lightgreen: { fill: '#9bdeac', stroke: '#2d6a4f' },
+    yellow:     { fill: '#ffee32', stroke: '#d4a373' },
+    orange:     { fill: '#f4a261', stroke: '#e76f51' },
+    red:        { fill: '#e63946', stroke: '#9bf6ff' },
+    pink:       { fill: '#ff85a1', stroke: '#c77dff' },
+    purple:     { fill: '#9d4edd', stroke: '#5a189a' },
+    white:      { fill: '#f8f9fa', stroke: '#a0a0a0' }
+  };
+
+  function getRingInnerDiameter(size) {
+    return 13.0 + (size - 1) * (1 / 3);
+  }
+
+  window.onload = () => {
+    document.getElementById('calib-slider').value = pxPerMm;
+    updateRulerWidth();
+    updateDrawing();
+  };
+
+  function switchTab(tabName) {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+    
+    event.target.classList.add('active');
+    document.getElementById('tab-' + tabName).classList.add('active');
+  }
+
+  function setView(view) {
+    currentView = view;
+    document.getElementById('view-front-btn').classList.toggle('active', view === 'front');
+    document.getElementById('view-side-btn').classList.toggle('active', view === 'side');
+    updateDrawing();
+  }
+
+  function selectColor(colorKey) {
+    selectedColorKey = colorKey;
+    document.getElementById('gem-color-select').value = colorKey;
+    updateDrawing();
+  }
+
+  function onAngleChange(val) {
+    currentAngle = parseFloat(val);
+    document.getElementById('angle-val').innerText = val;
+    updateDrawing();
+  }
+
+  function resetAngle() {
+    document.getElementById('gem-angle').value = 0;
+    onAngleChange(0);
+  }
+
+  function onZoomChange(val) {
+    currentZoom = val / 100;
+    document.getElementById('zoom-val').innerText = val;
+    updateDrawing();
+  }
+  function setZoom(val) {
+    document.getElementById('zoom-slider').value = val;
+    onZoomChange(val);
+  }
+  function resetZoom() {
+    setZoom(100);
+  }
+
+  function onCalibChange(val) {
+    pxPerMm = parseFloat(val);
+    updateRulerWidth();
+    updateDrawing();
+  }
+  function updateRulerWidth() {
+    document.getElementById('ruler').style.width = (50 * pxPerMm) + 'px';
+  }
+  function saveCalibration() {
+    localStorage.setItem('gem_px_per_mm', pxPerMm);
+    alert('実物大の補正値を保存しました！');
+  }
+
+  function updateDrawing() {
+    const stage = document.getElementById('stage');
+    stage.innerHTML = '';
+
+    const cx = stage.clientWidth / 2;
+    const cy = stage.clientHeight / 2;
+    const scale = pxPerMm * currentZoom;
+
+    const shape = document.getElementById('gem-shape').value;
+    const l = parseFloat(document.getElementById('gem-length').value) || 8.0;
+    const w = parseFloat(document.getElementById('gem-width').value) || 6.0;
+    const h = parseFloat(document.getElementById('gem-height').value) || 4.0;
+
+    const showRing = document.getElementById('ring-enable').value === 'true';
+    const ringSize = parseFloat(document.getElementById('ring-size').value) || 11;
+    const ringW = parseFloat(document.getElementById('ring-width').value) || 2.0;
+    const ringThick = parseFloat(document.getElementById('ring-thick').value) || 1.5;
+    const ringMat = document.getElementById('ring-material').value;
+
+    const metalColor = ringMat === 'gold' ? '#e5b842' : '#d0d5dd';
+    const gemColor = colorMap[selectedColorKey].fill;
+    const gemStroke = colorMap[selectedColorKey].stroke;
+
+    const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
+
+    if (currentView === 'front') {
+      if (showRing) {
+        const innerDiameter = getRingInnerDiameter(ringSize);
+        const outerDiameter = innerDiameter + (ringThick * 2);
+        const outerPx = outerDiameter * scale;
+        const ringWidthPx = ringW * scale;
+
+        const ringBand = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+        ringBand.setAttribute("x", cx - (outerPx / 2));
+        ringBand.setAttribute("y", cy - (ringWidthPx / 2));
+        ringBand.setAttribute("width", outerPx);
+        ringBand.setAttribute("height", ringWidthPx);
+        ringBand.setAttribute("rx", Math.min(ringWidthPx, 4));
+        ringBand.setAttribute("ry", Math.min(ringWidthPx, 4));
+        ringBand.setAttribute("fill", metalColor);
+        g.appendChild(ringBand);
+      }
+
+      const gemGroup = document.createElementNS("http://www.w3.org/2000/svg", "g");
+      gemGroup.setAttribute("transform", `rotate(${currentAngle}, ${cx}, ${cy})`);
+
+      const pw = (shape === 'round' ? w : w) * scale;
+      const pl = (shape === 'round' ? w : l) * scale;
+      const rx = pw / 2;
+      const ry = pl / 2;
+
+      let pathData = "";
+
+      if (shape === 'round' || shape === 'oval') {
+        const gem = document.createElementNS("http://www.w3.org/2000/svg", "ellipse");
+        gem.setAttribute("cx", cx); gem.setAttribute("cy", cy);
+        gem.setAttribute("rx", rx); gem.setAttribute("ry", ry);
+        gem.setAttribute("fill", gemColor); gem.setAttribute("fill-opacity", "0.85");
+        gem.setAttribute("stroke", gemStroke); gem.setAttribute("stroke-width", "1.5");
+        gemGroup.appendChild(gem);
+      } else if (shape === 'pear') {
+        pathData = `M ${cx} ${cy - ry}
+                    C ${cx + rx * 1.2} ${cy + ry * 0.3}, ${cx + rx} ${cy + ry}, ${cx} ${cy + ry}
+                    C ${cx - rx} ${cy + ry}, ${cx - rx * 1.2} ${cy + ry * 0.3}, ${cx} ${cy - ry} Z`;
+      } else if (shape === 'trilliant') {
+        pathData = `M ${cx} ${cy - ry}
+                    Q ${cx + rx * 1.1} ${cy}, ${cx + rx} ${cy + ry * 0.8}
+                    Q ${cx} ${cy + ry * 1.1}, ${cx - rx} ${cy + ry * 0.8}
+                    Q ${cx - rx * 1.1} ${cy}, ${cx} ${cy - ry} Z`;
+      }
+
+      if (pathData) {
+        const gem = document.createElementNS("http://www.w3.org/2000/svg", "path");
+        gem.setAttribute("d", pathData);
+        gem.setAttribute("fill", gemColor); gem.setAttribute("fill-opacity", "0.85");
+        gem.setAttribute("stroke", gemStroke); gem.setAttribute("stroke-width", "1.5");
+        gemGroup.appendChild(gem);
+      }
+
+      g.appendChild(gemGroup);
+
+    } else {
+      const pw = w * scale;
+      const ph = h * scale;
+
+      const crownH = ph * 0.35;
+      const tableW = pw * 0.55;
+
+      const gemTopY = cy - ph;
+      const girdleY = gemTopY + crownH;
+      const bottomY = gemTopY + ph;
+
+      const sidePath = `
+        M ${cx - tableW / 2} ${gemTopY}
+        L ${cx + tableW / 2} ${gemTopY}
+        L ${cx + pw / 2} ${girdleY}
+        L ${cx} ${bottomY}
+        L ${cx - pw / 2} ${girdleY}
+        Z
+      `;
+
+      if (showRing) {
+        const innerDiameter = getRingInnerDiameter(ringSize);
+        const outerDiameter = innerDiameter + (ringThick * 2);
+
+        const innerRadiusPx = (innerDiameter / 2) * scale;
+        const outerRadiusPx = (outerDiameter / 2) * scale;
+
+        const ringCenterY = bottomY + outerRadiusPx;
+
+        const outerRing = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+        outerRing.setAttribute("cx", cx);
+        outerRing.setAttribute("cy", ringCenterY);
+        outerRing.setAttribute("r", outerRadiusPx);
+        outerRing.setAttribute("fill", metalColor);
+        g.appendChild(outerRing);
+
+        const innerRing = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+        innerRing.setAttribute("cx", cx);
+        innerRing.setAttribute("cy", ringCenterY);
+        innerRing.setAttribute("r", innerRadiusPx);
+        innerRing.setAttribute("fill", "#ffffff");
+        g.appendChild(innerRing);
+      }
+
+      const gemSideGroup = document.createElementNS("http://www.w3.org/2000/svg", "g");
+      const gemCenterY = gemTopY + (ph / 2);
+      gemSideGroup.setAttribute("transform", `rotate(${currentAngle}, ${cx}, ${gemCenterY})`);
+
+      const gemSide = document.createElementNS("http://www.w3.org/2000/svg", "path");
+      gemSide.setAttribute("d", sidePath);
+      gemSide.setAttribute("fill", gemColor); gemSide.setAttribute("fill-opacity", "0.85");
+      gemSide.setAttribute("stroke", gemStroke); gemSide.setAttribute("stroke-width", "1.5");
+      gemSideGroup.appendChild(gemSide);
+
+      g.appendChild(gemSideGroup);
+    }
+
+    stage.appendChild(g);
+  }
+</script>
+</body>
+</html>
