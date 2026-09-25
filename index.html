@@ -235,7 +235,6 @@
     </div>
   </div>
 </div>
-
 <script>
   let pxPerMm = parseFloat(localStorage.getItem('gem_px_per_mm')) || 3.78;
   let currentZoom = 1.0;
@@ -396,7 +395,6 @@
         gem.setAttribute("stroke", gemStroke); gem.setAttribute("stroke-width", "1.5");
         gemGroup.appendChild(gem);
       } else if (shape === 'heart') {
-        // 上端（山の頂点）と下端（先端）が正確に縦幅・横幅の枠いっぱいに接する描画計算
         const topY = cy - ry;
         const bottomY = cy + ry;
         const notchY = cy - ry * 0.35;
@@ -478,3 +476,18 @@
       const gemSideGroup = document.createElementNS("http://www.w3.org/2000/svg", "g");
       const gemCenterY = gemTopY + (ph / 2);
       gemSideGroup.setAttribute("transform", `rotate(${currentAngle}, ${cx}, ${gemCenterY})`);
+
+      const gemSide = document.createElementNS("http://www.w3.org/2000/svg", "path");
+      gemSide.setAttribute("d", sidePath);
+      gemSide.setAttribute("fill", gemColor); gemSide.setAttribute("fill-opacity", "0.85");
+      gemSide.setAttribute("stroke", gemStroke); gemSide.setAttribute("stroke-width", "1.5");
+      gemSideGroup.appendChild(gemSide);
+
+      g.appendChild(gemSideGroup);
+    }
+
+    stage.appendChild(g);
+  }
+</script>
+</body>
+</html>
