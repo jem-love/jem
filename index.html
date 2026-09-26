@@ -407,9 +407,10 @@
                     Q ${cx - rx} ${cy + ry * 0.4}, ${cx - rx} ${notchY}
                     A ${r} ${r} 0 0 1 ${cx} ${notchY} Z`;
       } else if (shape === 'marquise') {
+        // 横幅(w)・縦幅(l)の枠ぴったりに収まるマーキス描画計算
         pathData = `M ${cx} ${cy - ry}
-                    Q ${cx + rx * 1.2} ${cy}, ${cx} ${cy + ry}
-                    Q ${cx - rx * 1.2} ${cy}, ${cx} ${cy - ry} Z`;
+                    Q ${cx + rx * 2.0} ${cy}, ${cx} ${cy + ry}
+                    Q ${cx - rx * 2.0} ${cy}, ${cx} ${cy - ry} Z`;
       } else if (shape === 'pear') {
         pathData = `M ${cx} ${cy - ry}
                     C ${cx + rx * 1.2} ${cy + ry * 0.3}, ${cx + rx} ${cy + ry}, ${cx} ${cy + ry}
