@@ -2,209 +2,188 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <title>ジュエリー実物大シミュレーター</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>実物大ジュエリー＆ルースシミュレーター</title>
+  
+  <!-- Android/PWAアプリ最適化メタタグ -->
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="theme-color" content="#ffffff">
+
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-    body { background: #f5f5f7; color: #333; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
-    
-    header { background: #fff; padding: 12px 16px; border-bottom: 1px solid #e5e5ea; text-align: center; }
-    header h1 { font-size: 16px; font-weight: 600; color: #1c1c1e; }
+    * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-user-select: none; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f8f9fa; color: #333; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
 
-    #stage-container { flex: 1; position: relative; background: #ffffff; display: flex; align-items: center; justify-content: center; overflow: hidden; }
-    #stage { width: 100%; height: 100%; }
+    header { background: #fff; padding: 16px 16px 12px 16px; border-bottom: 1px solid #e0e0e0; text-align: center; }
+    header h1 { font-size: 16px; font-weight: 600; color: #1a1a1a; }
 
-    #controls { background: #fff; border-top: 1px solid #e5e5ea; display: flex; flex-direction: column; max-height: 45vh; }
-    
-    .tabs { display: flex; border-bottom: 1px solid #e5e5ea; background: #fafafa; }
-    .tab { flex: 1; padding: 10px; text-align: center; font-size: 13px; font-weight: 500; color: #8e8e93; border: none; background: none; cursor: pointer; }
-    .tab.active { color: #007aff; border-bottom: 2px solid #007aff; background: #fff; font-weight: 600; }
+    /* 描画エリア */
+    #canvas-container {
+      width: 100%; height: 360px; background: #ffffff; position: relative;
+      display: flex; align-items: center; justify-content: center;
+      border-bottom: 1px solid #e0e0e0;
+      /* 方眼背景 */
+      background-image: linear-gradient(#f0f0f0 1px, transparent 1px), linear-gradient(90deg, #f0f0f0 1px, transparent 1px);
+      background-size: 10px 10px;
+    }
 
-    .tab-content { padding: 16px; overflow-y: auto; display: none; }
-    .tab-content.active { display: block; }
+    svg { display: block; }
 
-    .form-group { margin-bottom: 12px; }
-    .form-group label { display: block; font-size: 12px; font-weight: 600; color: #666; margin-bottom: 4px; }
-    .form-row { display: flex; gap: 8px; align-items: center; }
-    input[type="number"], select { flex: 1; padding: 8px 10px; border: 1px solid #c7c7cc; border-radius: 8px; font-size: 14px; background: #fff; }
-    input[type="range"] { flex: 1; margin: 0 8px; }
-
+    /* モード・視点切替ボタン */
     .btn-group { display: flex; gap: 8px; margin-bottom: 12px; }
-    .btn { flex: 1; padding: 8px; border: 1px solid #007aff; color: #007aff; background: #fff; border-radius: 8px; font-size: 13px; font-weight: 500; cursor: pointer; text-align: center; }
+    .btn { flex: 1; padding: 10px; border: 1px solid #007aff; color: #007aff; background: #fff; border-radius: 8px; font-size: 14px; font-weight: 500; cursor: pointer; text-align: center; }
     .btn.active { background: #007aff; color: #fff; }
-    .btn-step { width: 36px; height: 36px; padding: 0; font-size: 18px; font-weight: bold; border-radius: 50%; border: 1px solid #c7c7cc; background: #f2f2f7; color: #007aff; cursor: pointer; }
 
-    .color-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-top: 4px; }
-    .color-btn { height: 32px; border-radius: 6px; border: 2px solid transparent; cursor: pointer; }
-    .color-btn.active { border-color: #1c1c1e; transform: scale(1.05); }
+    /* コントロールパネル */
+    #controls { flex: 1; background: #fff; padding: 16px; overflow-y: auto; display: flex; flex-direction: column; gap: 14px; }
 
-    .calib-box { background: #f9f9fb; border: 1px solid #e5e5ea; border-radius: 8px; padding: 12px; margin-bottom: 12px; }
-    .calib-mode-tabs { display: flex; gap: 8px; margin-bottom: 12px; }
-    .calib-mode-btn { flex: 1; padding: 6px; font-size: 12px; border: 1px solid #c7c7cc; border-radius: 6px; background: #fff; cursor: pointer; }
-    .calib-mode-btn.active { background: #e5f1ff; border-color: #007aff; color: #007aff; font-weight: 600; }
+    .form-group { display: flex; flex-direction: column; gap: 6px; }
+    .form-group label { font-size: 13px; font-weight: 600; color: #555; }
+    .form-row { display: flex; gap: 8px; align-items: center; }
 
-    #calib-guide-container { margin: 10px 0; padding: 8px; background: #fff; border: 1px dashed #007aff; border-radius: 6px; }
-    .calib-line-card { position: relative; height: 30px; background: #e5f1ff; border-left: 3px solid #ff3b30; border-right: 3px solid #007aff; border-radius: 2px; }
-    .calib-line-ruler { position: relative; height: 16px; background: #34c759; border-radius: 2px; }
+    input[type="number"], select { flex: 1; padding: 10px; border: 1px solid #ccc; border-radius: 8px; font-size: 16px; background: #fff; }
+    input[type="range"] { flex: 1; }
+
+    /* カラーパレット */
+    .color-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+    .color-btn { height: 36px; border-radius: 8px; border: 2px solid transparent; cursor: pointer; }
+    .color-btn.active { border-color: #007aff; transform: scale(1.05); }
+
+    /* 実物大調整ボックス */
+    .calib-box { background: #f1f3f5; padding: 12px; border-radius: 8px; border: 1px solid #dee2e6; }
+    .ruler-guide { width: 50mm; height: 16px; background: #34c759; margin: 8px 0; border-radius: 2px; }
   </style>
 </head>
 <body>
 
 <header>
-  <h1>ジュエリー実物大シミュレーター</h1>
+  <h1>実物大ジュエリー＆ルースシミュレーター</h1>
 </header>
 
-<div id="stage-container">
+<!-- 描画画面 -->
+<div id="canvas-container">
   <svg id="stage"></svg>
 </div>
 
+<!-- 操作コントロール -->
 <div id="controls">
-  <div class="tabs">
-    <button class="tab active" onclick="switchTab('gem')">宝石設定</button>
-    <button class="tab" onclick="switchTab('ring')">リング設定</button>
-    <button class="tab" onclick="switchTab('calib')">実物大調整</button>
+  
+  <!-- 視点・モード切替 -->
+  <div class="btn-group">
+    <button id="view-front-btn" class="btn active" onclick="setView('front')">正面表示</button>
+    <button id="view-side-btn" class="btn" onclick="setView('side')">側面表示</button>
   </div>
 
-  <!-- 宝石設定 -->
-  <div id="tab-gem" class="tab-content active">
-    <div class="btn-group">
-      <button id="view-front-btn" class="btn active" onclick="setView('front')">正面表示</button>
-      <button id="view-side-btn" class="btn" onclick="setView('side')">側面表示</button>
-    </div>
-    
-    <div class="form-group">
-      <label>形状</label>
-      <select id="gem-shape" onchange="updateDrawing()">
-        <option value="round">ラウンド (Round)</option>
-        <option value="oval">オーバル (Oval)</option>
-        <option value="square">スクエア (Square/Princess)</option>
-        <option value="heart">ハート (Heart)</option>
-        <option value="marquise" selected>マーキス (Marquise)</option>
-        <option value="pear">ペアシェイプ (Pear)</option>
-        <option value="trilliant">トリリアント (Trilliant)</option>
-      </select>
-    </div>
+  <!-- 形状選択 -->
+  <div class="form-group">
+    <label>形状</label>
+    <select id="gem-shape" onchange="updateDrawing()">
+      <option value="round">ラウンド (Round)</option>
+      <option value="oval">オーバル (Oval)</option>
+      <option value="square">スクエア (Square/Princess)</option>
+      <option value="heart">ハート (Heart)</option>
+      <option value="marquise" selected>マーキス (Marquise)</option>
+      <option value="pear">ペアシェイプ (Pear)</option>
+      <option value="trilliant">トリリアント (Trilliant)</option>
+    </select>
+  </div>
 
-    <div class="form-group">
-      <label>サイズ (mm)</label>
-      <div class="form-row">
-        <input type="number" id="gem-length" value="8.0" step="0.1" placeholder="縦幅" oninput="updateDrawing()">
-        <span>×</span>
-        <input type="number" id="gem-width" value="4.0" step="0.1" placeholder="横幅" oninput="updateDrawing()">
-        <span>×</span>
-        <input type="number" id="gem-height" value="3.0" step="0.1" placeholder="高さ" oninput="updateDrawing()">
-      </div>
-    </div>
-
-    <div class="form-group">
-      <label>回転角度: <span id="angle-val">0</span>°</label>
-      <div class="form-row">
-        <input type="range" id="gem-angle" min="0" max="360" value="0" oninput="onAngleChange(this.value)">
-        <button class="btn" style="flex:0 0 50px; padding:4px;" onclick="resetAngle()">リセット</button>
-      </div>
-    </div>
-
-    <div class="form-group">
-      <label>カラー（宝石イメージ）</label>
-      <select id="gem-color-select" style="display:none;" onchange="updateDrawing()"></select>
-      <div class="color-grid" id="color-palette"></div>
+  <!-- サイズ入力 -->
+  <div class="form-group">
+    <label>サイズ (mm)</label>
+    <div class="form-row">
+      <input type="number" id="gem-length" value="8.0" step="0.1" placeholder="縦幅" oninput="updateDrawing()">
+      <span>×</span>
+      <input type="number" id="gem-width" value="4.0" step="0.1" placeholder="横幅" oninput="updateDrawing()">
+      <span>×</span>
+      <input type="number" id="gem-height" value="3.0" step="0.1" placeholder="高さ" oninput="updateDrawing()">
     </div>
   </div>
 
-  <!-- リング設定 -->
-  <div id="tab-ring" class="tab-content">
-    <div class="form-group">
-      <label>リング枠の表示</label>
-      <select id="ring-enable" onchange="updateDrawing()">
-        <option value="false">非表示 (ルースのみ)</option>
-        <option value="true" selected>表示する</option>
-      </select>
+  <!-- 回転角度 -->
+  <div class="form-group">
+    <label>回転角度: <span id="angle-val">0</span>°</label>
+    <div class="form-row">
+      <input type="range" id="gem-angle" min="0" max="360" value="0" oninput="onAngleChange(this.value)">
+      <button class="btn" style="flex:0 0 60px; padding:8px;" onclick="resetAngle()">リセット</button>
     </div>
+  </div>
 
-    <div class="form-group">
-      <label>リングサイズ (号数)</label>
-      <input type="number" id="ring-size" value="11" step="0.5" oninput="updateDrawing()">
-    </div>
+  <!-- カラーパレット -->
+  <div class="form-group">
+    <label>カラー</label>
+    <select id="gem-color-select" style="display:none;" onchange="updateDrawing()"></select>
+    <div class="color-grid" id="color-palette"></div>
+  </div>
 
-    <div class="form-group">
-      <label>アーム幅 / 厚み (mm)</label>
-      <div class="form-row">
-        <input type="number" id="ring-width" value="2.0" step="0.1" placeholder="幅" oninput="updateDrawing()">
-        <span>/</span>
-        <input type="number" id="ring-thick" value="1.5" step="0.1" placeholder="厚み" oninput="updateDrawing()">
-      </div>
-    </div>
+  <!-- リング枠オプション -->
+  <div class="form-group">
+    <label>リング枠の表示</label>
+    <select id="ring-enable" onchange="updateDrawing()">
+      <option value="false">非表示 (ルースのみ)</option>
+      <option value="true" selected>表示する</option>
+    </select>
+  </div>
 
-    <div class="form-group">
-      <label>素材（地金カラー）</label>
-      <select id="ring-material" onchange="updateDrawing()">
-        <option value="platinum">プラチナ / シルバー (銀色)</option>
-        <option value="gold">イエローゴールド (金色)</option>
-      </select>
+  <!-- リングサイズ・幅 -->
+  <div class="form-group">
+    <label>リングサイズ (号数) & アーム幅(mm)</label>
+    <div class="form-row">
+      <input type="number" id="ring-size" value="11" step="0.5" oninput="updateDrawing()" placeholder="号数">
+      <input type="number" id="ring-width" value="2.0" step="0.1" oninput="updateDrawing()" placeholder="幅">
+      <input type="number" id="ring-thick" value="1.5" step="0.1" oninput="updateDrawing()" placeholder="厚み">
     </div>
+  </div>
+
+  <!-- 地金素材 -->
+  <div class="form-group">
+    <label>素材（地金カラー）</label>
+    <select id="ring-material" onchange="updateDrawing()">
+      <option value="platinum">プラチナ / シルバー (銀色)</option>
+      <option value="gold">イエローゴールド (金色)</option>
+    </select>
   </div>
 
   <!-- 実物大調整（キャリブレーション） -->
-  <div id="tab-calib" class="tab-content">
-    <div class="calib-box">
-      <label>調整基準の選択</label>
-      <div class="calib-mode-tabs">
-        <button id="mode-card-btn" class="calib-mode-btn active" onclick="setCalibMode('card')">💳 カード（片側合わせ）</button>
-        <button id="mode-ruler-btn" class="calib-mode-btn" onclick="setCalibMode('ruler')">📏 定規（5cm）</button>
-      </div>
-
-      <div id="calib-guide-container">
-        <div id="guide-card">
-          <p style="font-size:11px; color:#555; margin-bottom:6px;">カードの<b>左端を赤い線</b>に当て、<b>右端が青い線</b>に重なるよう右下のボタンで微調整してください。</p>
-          <div id="card-box" class="calib-line-card"></div>
-        </div>
-        <div id="guide-ruler" style="display:none;">
-          <p style="font-size:11px; color:#555; margin-bottom:6px;">実際の定規の <b>50mm (5cm)</b> と長さを合わせてください。</p>
-          <div id="ruler-box" class="calib-line-ruler"></div>
-        </div>
-      </div>
-
-      <div class="form-group" style="margin-top:10px;">
-        <label>補正値微調整 (px/mm)</label>
-        <div class="form-row">
-          <button class="btn-step" onclick="stepCalib(-0.02)">－</button>
-          <input type="range" id="calib-slider" min="2.0" max="6.0" step="0.01" value="3.78" oninput="onCalibChange(this.value)">
-          <button class="btn-step" onclick="stepCalib(0.02)">＋</button>
-        </div>
-      </div>
-
-      <button class="btn active" style="width:100%; margin-top:8px;" onclick="saveCalibration()">この補正値を保存</button>
-    </div>
-
+  <div class="calib-box">
     <div class="form-group">
-      <label>拡大 / 縮小表示: <span id="zoom-val">100</span>%</label>
+      <label>実物大調整 (画面上の緑の帯を実際の定規の50mmに合わせてください)</label>
+      <div class="ruler-guide" id="ruler-guide-bar"></div>
       <div class="form-row">
-        <input type="range" id="zoom-slider" min="50" max="200" value="100" oninput="onZoomChange(this.value)">
-        <button class="btn" style="flex:0 0 50px; padding:4px;" onclick="resetZoom()">100%</button>
+        <input type="range" id="calib-slider" min="2.0" max="6.0" step="0.01" value="3.78" oninput="onCalibChange(this.value)">
+        <button class="btn" style="flex:0 0 60px; padding:8px;" onclick="saveCalibration()">保存</button>
       </div>
     </div>
   </div>
+
+  <!-- 拡大・縮小 -->
+  <div class="form-group">
+    <label>拡大 / 縮小表示: <span id="zoom-val">100</span>%</label>
+    <div class="form-row">
+      <input type="range" id="zoom-slider" min="50" max="200" value="100" oninput="onZoomChange(this.value)">
+      <button class="btn" style="flex:0 0 60px; padding:8px;" onclick="resetZoom()">100%</button>
+    </div>
+  </div>
+
 </div>
 
 <script>
   let pxPerMm = parseFloat(localStorage.getItem('gem_px_per_mm')) || 3.78;
   let currentZoom = 1.0;
   let currentView = 'front';
-  let selectedColorKey = 'paraiba';
+  let selectedColorKey = 'lightblue';
   let currentAngle = 0;
-  let calibMode = 'card';
 
   const colorMap = {
-    ruby:       { fill: '#d90429', stroke: '#800f2f', name: 'ルビー (赤)' },
-    paraiba:    { fill: '#4ea8de', stroke: '#0077b6', name: 'パライバトルマリン (水色)' },
-    emerald:    { fill: '#2d6a4f', stroke: '#1b4332', name: 'エメラルド (緑)' },
-    sphene:     { fill: '#d4a373', stroke: '#bc6c25', name: 'スフェーン (黄)' },
-    sapphire:   { fill: '#1d3557', stroke: '#0b090a', name: 'ロイヤルブルーサファイア (青)' },
-    padparadscha:{ fill: '#f28482', stroke: '#c9184a', name: 'パパラチアサファイア (ピンク)' },
-    mint:       { fill: '#95d5b2', stroke: '#40916c', name: 'ミントガーネット (黄緑)' },
-    amethyst:   { fill: '#7209b7', stroke: '#3a0ca3', name: 'アメジスト (紫)' },
-    mari:       { fill: '#e07a5f', stroke: '#9d4edd', name: 'マリガーネット (オレンジ)' },
-    white:      { fill: '#f8f9fa', stroke: '#adb5bd', name: 'クリア/ダイヤ (白)' }
+    lightblue:  { fill: '#70d6ff', stroke: '#0077b6', name: '水色' },
+    blue:       { fill: '#0077b6', stroke: '#03045e', name: '青' },
+    green:      { fill: '#2a9d8f', stroke: '#134e4a', name: '緑' },
+    lightgreen: { fill: '#9bdeac', stroke: '#2d6a4f', name: '黄緑' },
+    yellow:     { fill: '#ffee32', stroke: '#d4a373', name: '黄' },
+    orange:     { fill: '#f4a261', stroke: '#e76f51', name: 'オレンジ' },
+    red:        { fill: '#e63946', stroke: '#9bf6ff', name: '赤' },
+    pink:       { fill: '#ff85a1', stroke: '#c77dff', name: 'ピンク' },
+    purple:     { fill: '#9d4edd', stroke: '#5a189a', name: '紫' },
+    white:      { fill: '#f8f9fa', stroke: '#a0a0a0', name: 'クリア/白' }
   };
 
   function getRingInnerDiameter(size) {
@@ -214,7 +193,7 @@
   window.onload = () => {
     buildColorPalette();
     document.getElementById('calib-slider').value = pxPerMm;
-    updateCalibGuides();
+    updateRulerBar();
     updateDrawing();
   };
 
@@ -232,18 +211,9 @@
       const btn = document.createElement('button');
       btn.className = `color-btn ${key === selectedColorKey ? 'active' : ''}`;
       btn.style.backgroundColor = colorMap[key].fill;
-      btn.title = colorMap[key].name;
       btn.onclick = () => selectColor(key);
       palette.appendChild(btn);
     });
-  }
-
-  function switchTab(tabName) {
-    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-    
-    event.target.classList.add('active');
-    document.getElementById('tab-' + tabName).classList.add('active');
   }
 
   function setView(view) {
@@ -280,31 +250,14 @@
     onZoomChange(100);
   }
 
-  function setCalibMode(mode) {
-    calibMode = mode;
-    document.getElementById('mode-card-btn').classList.toggle('active', mode === 'card');
-    document.getElementById('mode-ruler-btn').classList.toggle('active', mode === 'ruler');
-    document.getElementById('guide-card').style.display = mode === 'card' ? 'block' : 'none';
-    document.getElementById('guide-ruler').style.display = mode === 'ruler' ? 'block' : 'none';
-    updateCalibGuides();
-  }
-
   function onCalibChange(val) {
     pxPerMm = parseFloat(val);
-    updateCalibGuides();
+    updateRulerBar();
     updateDrawing();
   }
 
-  function stepCalib(delta) {
-    pxPerMm = Math.max(2.0, Math.min(6.0, pxPerMm + delta));
-    document.getElementById('calib-slider').value = pxPerMm;
-    updateCalibGuides();
-    updateDrawing();
-  }
-
-  function updateCalibGuides() {
-    document.getElementById('card-box').style.width = (85.6 * pxPerMm) + 'px';
-    document.getElementById('ruler-box').style.width = (50.0 * pxPerMm) + 'px';
+  function updateRulerBar() {
+    document.getElementById('ruler-guide-bar').style.width = (50.0 * pxPerMm) + 'px';
   }
 
   function saveCalibration() {
@@ -313,11 +266,15 @@
   }
 
   function updateDrawing() {
+    const container = document.getElementById('canvas-container');
     const stage = document.getElementById('stage');
+    
+    stage.setAttribute("width", container.clientWidth);
+    stage.setAttribute("height", container.clientHeight);
     stage.innerHTML = '';
 
-    const cx = stage.clientWidth / 2;
-    const cy = stage.clientHeight / 2;
+    const cx = container.clientWidth / 2;
+    const cy = container.clientHeight / 2;
     const scale = pxPerMm * currentZoom;
 
     const shape = document.getElementById('gem-shape').value;
