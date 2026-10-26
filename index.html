@@ -66,18 +66,24 @@
     }
     .color-btn.active { border-color: #007aff; box-shadow: 0 0 0 2px rgba(0,122,255,0.3); }
 
-    /* キャリブレーション専用（左右の余白を詰めて幅を約1cm広く確保） */
-    .calib-box { background: #fff; padding: 20px 10px; border-radius: 12px; border: 1px solid #e0e0e0; }
+    /* キャリブレーション専用（左右の余白を極限まで削り、幅をさらにワイドに拡張） */
+    .calib-box { 
+      background: #fff; 
+      padding: 20px 4px; /* パディングを最小限にして画面幅いっぱいに */
+      border-radius: 12px; 
+      border: 1px solid #e0e0e0; 
+      width: 100%;
+    }
     .ruler-container {
       margin: 5px 0 10px 0;
-      padding: 15px 4px; /* 左右の余白を狭めてバーを広く */
+      padding: 15px 2px;
       background: #fafafa;
       border-radius: 8px;
       border: 1px dashed #ccc;
       display: flex;
       flex-direction: column;
       align-items: flex-start;
-      width: 100%;
+      width: 100%; /* 親の幅に対してめいっぱい広げる */
     }
     .ruler-label { font-size: 11px; color: #007aff; font-weight: bold; margin-bottom: 6px; align-self: center; }
     .ruler-line { height: 10px; background: #007aff; border-radius: 0; position: relative; }
@@ -222,10 +228,10 @@
     </div>
   </div>
 
-  <!-- 4. 実物大補正（幅を約1cm広く拡張） -->
+  <!-- 4. 実物大補正（画面幅いっぱいにワイド拡張） -->
   <div id="tab-calib" class="tab-content">
     <div class="calib-box">
-      <!-- 1. 幅を広げたバー -->
+      <!-- 1. ワイドなバー -->
       <div class="ruler-container">
         <span class="ruler-label">◀ 50 mm (5 cm) [左端基準] ▶</span>
         <div id="ruler" class="ruler-line" style="width: 189px;"></div>
@@ -237,7 +243,7 @@
       <!-- 3. 広々スペース -->
       <div class="calib-spacer"></div>
 
-      <!-- 4. 幅を広げた微調整スライダー -->
+      <!-- 4. ワイドな微調整スライダー -->
       <div class="form-group" style="padding: 0 4px;">
         <label>微調整 (Px/mm 補正)</label>
         <input type="range" id="calib-slider" min="2.0" max="8.0" step="0.01" value="3.78" oninput="onCalibChange(this.value)">
@@ -464,7 +470,7 @@
         Z
       `;
 
- if (showRing) {
+    if (showRing) {
         const innerDiameter = getRingInnerDiameter(ringSize);
         const outerDiameter = innerDiameter + (ringThick * 2);
 
