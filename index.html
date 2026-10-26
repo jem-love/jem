@@ -2,257 +2,209 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>実物大ジュエリー＆ルースシミュレーター</title>
-  
-  <!-- Android/PWAアプリ最適化メタタグ -->
-  <meta name="mobile-web-app-capable" content="yes">
-  <meta name="theme-color" content="#ffffff">
-
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>ジュエリー実物大シミュレーター</title>
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-tap-highlight-color: transparent; }
-    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f5f5f7; color: #333; overflow-x: hidden; }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { background: #f5f5f7; color: #333; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
     
-    header { background: #fff; padding: 16px 16px 12px 16px; border-bottom: 1px solid #ddd; text-align: center; font-weight: bold; font-size: 16px; }
+    header { background: #fff; padding: 12px 16px; border-bottom: 1px solid #e5e5ea; text-align: center; }
+    header h1 { font-size: 16px; font-weight: 600; color: #1c1c1e; }
+
+    #stage-container { flex: 1; position: relative; background: #ffffff; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+    #stage { width: 100%; height: 100%; }
+
+    #controls { background: #fff; border-top: 1px solid #e5e5ea; display: flex; flex-direction: column; max-height: 45vh; }
     
-    /* 描画エリア */
-    #canvas-container {
-      width: 100%; height: 360px; background: #ffffff; position: relative;
-      display: flex; align-items: center; justify-content: center; overflow: hidden;
-      border-bottom: 1px solid #e0e0e0;
-      /* 方眼背景 */
-      background-image: linear-gradient(#f0f0f0 1px, transparent 1px), linear-gradient(90deg, #f0f0f0 1px, transparent 1px);
-      background-size: 10px 10px;
-    }
-    
-    svg { display: block; }
+    .tabs { display: flex; border-bottom: 1px solid #e5e5ea; background: #fafafa; }
+    .tab { flex: 1; padding: 10px; text-align: center; font-size: 13px; font-weight: 500; color: #8e8e93; border: none; background: none; cursor: pointer; }
+    .tab.active { color: #007aff; border-bottom: 2px solid #007aff; background: #fff; font-weight: 600; }
 
-    /* モード・視点切替ボタン */
-    .overlay-controls {
-      position: absolute; top: 12px; right: 12px; display: flex; flex-direction: column; gap: 8px; z-index: 10;
-    }
-    .btn-toggle {
-      background: rgba(255, 255, 255, 0.95); border: 1px solid #ccc; padding: 6px 12px;
-      border-radius: 20px; font-size: 12px; font-weight: bold; cursor: pointer; backdrop-filter: blur(4px);
-    }
-    .btn-toggle.active { background: #007aff; color: #fff; border-color: #007aff; }
-
-    /* コントロールパネル */
-    .panel { padding: 16px; max-width: 600px; margin: 0 auto; }
-    .tabs { display: flex; gap: 8px; border-bottom: 2px solid #ddd; margin-bottom: 16px; }
-    .tab { padding: 8px 16px; font-weight: bold; cursor: pointer; color: #666; border-bottom: 2px solid transparent; margin-bottom: -2px; }
-    .tab.active { color: #007aff; border-bottom-color: #007aff; }
-
-    .tab-content { display: none; }
+    .tab-content { padding: 16px; overflow-y: auto; display: none; }
     .tab-content.active { display: block; }
 
-    /* フォームパーツ */
-    .form-group { margin-bottom: 14px; }
-    label { font-size: 13px; font-weight: bold; color: #555; display: block; margin-bottom: 6px; }
-    select, input[type="number"], input[type="range"] {
-      width: 100%; padding: 10px 12px; border: 1px solid #ccc; border-radius: 8px; font-size: 14px; background: #fff;
-    }
-    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-    .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
-    .grid-4 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 6px; }
+    .form-group { margin-bottom: 12px; }
+    .form-group label { display: block; font-size: 12px; font-weight: 600; color: #666; margin-bottom: 4px; }
+    .form-row { display: flex; gap: 8px; align-items: center; }
+    input[type="number"], select { flex: 1; padding: 8px 10px; border: 1px solid #c7c7cc; border-radius: 8px; font-size: 14px; background: #fff; }
+    input[type="range"] { flex: 1; margin: 0 8px; }
 
-    /* カラーパレット */
-    .color-picker {
-      display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-top: 6px;
-    }
-    .color-btn {
-      height: 38px; border-radius: 8px; border: 2px solid #ddd; cursor: pointer;
-      display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: bold;
-    }
-    .color-btn.active { border-color: #007aff; box-shadow: 0 0 0 2px rgba(0,122,255,0.3); }
+    .btn-group { display: flex; gap: 8px; margin-bottom: 12px; }
+    .btn { flex: 1; padding: 8px; border: 1px solid #007aff; color: #007aff; background: #fff; border-radius: 8px; font-size: 13px; font-weight: 500; cursor: pointer; text-align: center; }
+    .btn.active { background: #007aff; color: #fff; }
+    .btn-step { width: 36px; height: 36px; padding: 0; font-size: 18px; font-weight: bold; border-radius: 50%; border: 1px solid #c7c7cc; background: #f2f2f7; color: #007aff; cursor: pointer; }
 
-    /* キャリブレーション専用 */
-    .calib-box { background: #fff; padding: 20px 16px; border-radius: 12px; border: 1px solid #e0e0e0; text-align: center; }
-    .ruler-container {
-      margin: 25px auto 35px auto;
-      padding: 15px 0;
-      background: #fafafa;
-      border-radius: 8px;
-      border: 1px dashed #ccc;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-    }
-    .ruler-label { font-size: 11px; color: #007aff; font-weight: bold; margin-bottom: 6px; }
-    .ruler-line { height: 10px; background: #007aff; border-radius: 5px; position: relative; }
+    .color-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-top: 4px; }
+    .color-btn { height: 32px; border-radius: 6px; border: 2px solid transparent; cursor: pointer; }
+    .color-btn.active { border-color: #1c1c1e; transform: scale(1.05); }
+
+    .calib-box { background: #f9f9fb; border: 1px solid #e5e5ea; border-radius: 8px; padding: 12px; margin-bottom: 12px; }
+    .calib-mode-tabs { display: flex; gap: 8px; margin-bottom: 12px; }
+    .calib-mode-btn { flex: 1; padding: 6px; font-size: 12px; border: 1px solid #c7c7cc; border-radius: 6px; background: #fff; cursor: pointer; }
+    .calib-mode-btn.active { background: #e5f1ff; border-color: #007aff; color: #007aff; font-weight: 600; }
+
+    #calib-guide-container { margin: 10px 0; padding: 8px; background: #fff; border: 1px dashed #007aff; border-radius: 6px; }
+    .calib-line-card { position: relative; height: 30px; background: #e5f1ff; border-left: 3px solid #ff3b30; border-right: 3px solid #007aff; border-radius: 2px; }
+    .calib-line-ruler { position: relative; height: 16px; background: #34c759; border-radius: 2px; }
   </style>
 </head>
 <body>
 
-<header>💎 ジュエリーシミュレーター</header>
+<header>
+  <h1>ジュエリー実物大シミュレーター</h1>
+</header>
 
-<div id="canvas-container">
-  <div class="overlay-controls">
-    <button class="btn-toggle active" id="view-front-btn" onclick="setView('front')">正面（真上）</button>
-    <button class="btn-toggle" id="view-side-btn" onclick="setView('side')">側面表示</button>
-    <button class="btn-toggle" id="reset-zoom-btn" onclick="resetZoom()">1:1 実物大に戻す</button>
-  </div>
-  
-  <svg id="stage" width="100%" height="100%"></svg>
+<div id="stage-container">
+  <svg id="stage"></svg>
 </div>
 
-<div class="panel">
+<div id="controls">
   <div class="tabs">
-    <div class="tab active" onclick="switchTab('gem')">💎 宝石</div>
-    <div class="tab" onclick="switchTab('ring')">💍 リング</div>
-    <div class="tab" onclick="switchTab('zoom')">🔍 ズーム</div>
-    <div class="tab" onclick="switchTab('calib')">📏 実物大補正</div>
+    <button class="tab active" onclick="switchTab('gem')">宝石設定</button>
+    <button class="tab" onclick="switchTab('ring')">リング設定</button>
+    <button class="tab" onclick="switchTab('calib')">実物大調整</button>
   </div>
 
-  <!-- 1. 宝石設定 -->
+  <!-- 宝石設定 -->
   <div id="tab-gem" class="tab-content active">
+    <div class="btn-group">
+      <button id="view-front-btn" class="btn active" onclick="setView('front')">正面表示</button>
+      <button id="view-side-btn" class="btn" onclick="setView('side')">側面表示</button>
+    </div>
+    
     <div class="form-group">
-      <label>シェイプ（形状）</label>
+      <label>形状</label>
       <select id="gem-shape" onchange="updateDrawing()">
-        <option value="oval">オーバル (Oval)</option>
         <option value="round">ラウンド (Round)</option>
-        <option value="square">スクエア (Square)</option>
+        <option value="oval">オーバル (Oval)</option>
+        <option value="square">スクエア (Square/Princess)</option>
         <option value="heart">ハート (Heart)</option>
-        <option value="marquise">マーキス (Marquise)</option>
+        <option value="marquise" selected>マーキス (Marquise)</option>
         <option value="pear">ペアシェイプ (Pear)</option>
         <option value="trilliant">トリリアント (Trilliant)</option>
       </select>
     </div>
 
-    <div class="grid-3">
-      <div class="form-group">
-        <label>縦幅 (mm)</label>
-        <input type="number" id="gem-length" value="8.0" step="0.1" oninput="updateDrawing()">
-      </div>
-      <div class="form-group">
-        <label>横幅 (mm)</label>
-        <input type="number" id="gem-width" value="6.0" step="0.1" oninput="updateDrawing()">
-      </div>
-      <div class="form-group">
-        <label>高さ (mm)</label>
-        <input type="number" id="gem-height" value="4.0" step="0.1" oninput="updateDrawing()">
+    <div class="form-group">
+      <label>サイズ (mm)</label>
+      <div class="form-row">
+        <input type="number" id="gem-length" value="8.0" step="0.1" placeholder="縦幅" oninput="updateDrawing()">
+        <span>×</span>
+        <input type="number" id="gem-width" value="4.0" step="0.1" placeholder="横幅" oninput="updateDrawing()">
+        <span>×</span>
+        <input type="number" id="gem-height" value="3.0" step="0.1" placeholder="高さ" oninput="updateDrawing()">
       </div>
     </div>
 
-    <!-- 傾き（360度対応） -->
     <div class="form-group">
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-        <label style="margin-bottom: 0;">傾き (角度): <span id="angle-val">0</span>°</label>
-        <button class="btn-toggle" style="padding: 2px 8px; font-size: 11px;" onclick="resetAngle()">0°に戻す</button>
+      <label>回転角度: <span id="angle-val">0</span>°</label>
+      <div class="form-row">
+        <input type="range" id="gem-angle" min="0" max="360" value="0" oninput="onAngleChange(this.value)">
+        <button class="btn" style="flex:0 0 50px; padding:4px;" onclick="resetAngle()">リセット</button>
       </div>
-      <input type="range" id="gem-angle" min="-180" max="180" value="0" step="1" oninput="onAngleChange(this.value)">
     </div>
 
     <div class="form-group">
-      <label>宝石の色</label>
-      <select id="gem-color-select" onchange="selectColor(this.value)">
-        <option value="lightblue">水色</option>
-        <option value="blue">青</option>
-        <option value="green">緑</option>
-        <option value="lightgreen">黄緑</option>
-        <option value="yellow">黄</option>
-        <option value="orange">オレンジ</option>
-        <option value="red">赤</option>
-        <option value="pink">ピンク</option>
-        <option value="purple">紫</option>
-        <option value="white">白</option>
-      </select>
-
-      <div class="color-picker">
-        <div class="color-btn" style="background: #70d6ff; color: #000;" onclick="selectColor('lightblue')">水色</div>
-        <div class="color-btn" style="background: #0077b6; color: #fff;" onclick="selectColor('blue')">青</div>
-        <div class="color-btn" style="background: #2a9d8f; color: #fff;" onclick="selectColor('green')">緑</div>
-        <div class="color-btn" style="background: #9bdeac; color: #000;" onclick="selectColor('lightgreen')">黄緑</div>
-        <div class="color-btn" style="background: #ffee32; color: #000;" onclick="selectColor('yellow')">黄</div>
-        <div class="color-btn" style="background: #f4a261; color: #000;" onclick="selectColor('orange')">オレンジ</div>
-        <div class="color-btn" style="background: #e63946; color: #fff;" onclick="selectColor('red')">赤</div>
-        <div class="color-btn" style="background: #ff85a1; color: #000;" onclick="selectColor('pink')">ピンク</div>
-        <div class="color-btn" style="background: #9d4edd; color: #fff;" onclick="selectColor('purple')">紫</div>
-        <div class="color-btn" style="background: #ffffff; color: #333; border: 1px solid #ccc;" onclick="selectColor('white')">白</div>
-      </div>
+      <label>カラー（宝石イメージ）</label>
+      <select id="gem-color-select" style="display:none;" onchange="updateDrawing()"></select>
+      <div class="color-grid" id="color-palette"></div>
     </div>
   </div>
 
-  <!-- 2. リング設定 -->
+  <!-- リング設定 -->
   <div id="tab-ring" class="tab-content">
     <div class="form-group">
-      <label>組み合わせ表示</label>
+      <label>リング枠の表示</label>
       <select id="ring-enable" onchange="updateDrawing()">
-        <option value="false">ルース単体</option>
-        <option value="true">宝石 ＋ リング枠</option>
+        <option value="false">非表示 (ルースのみ)</option>
+        <option value="true" selected>表示する</option>
       </select>
     </div>
-    <div class="grid-4">
-      <div class="form-group">
-        <label>号数(JIS)</label>
-        <input type="number" id="ring-size" value="11" step="1" min="1" max="30" oninput="updateDrawing()">
-      </div>
-      <div class="form-group">
-        <label>幅 (mm)</label>
-        <input type="number" id="ring-width" value="2.0" step="0.1" oninput="updateDrawing()">
-      </div>
-      <div class="form-group">
-        <label>厚み (mm)</label>
-        <input type="number" id="ring-thick" value="1.5" step="0.1" oninput="updateDrawing()">
-      </div>
-      <div class="form-group">
-        <label>素材</label>
-        <select id="ring-material" onchange="updateDrawing()">
-          <option value="gold">K / 金</option>
-          <option value="silver">Pt / プラチナ</option>
-        </select>
-      </div>
-    </div>
-  </div>
 
-  <!-- 3. ズーム設定 -->
-  <div id="tab-zoom" class="tab-content">
     <div class="form-group">
-      <label>倍率: <span id="zoom-val">100</span>%</label>
-      <input type="range" id="zoom-slider" min="50" max="250" value="100" oninput="onZoomChange(this.value)">
+      <label>リングサイズ (号数)</label>
+      <input type="number" id="ring-size" value="11" step="0.5" oninput="updateDrawing()">
     </div>
-    <div class="grid-2">
-      <button class="btn-toggle" onclick="setZoom(100)">100% (実物大)</button>
-      <button class="btn-toggle" onclick="setZoom(200)">200% (2倍拡大)</button>
+
+    <div class="form-group">
+      <label>アーム幅 / 厚み (mm)</label>
+      <div class="form-row">
+        <input type="number" id="ring-width" value="2.0" step="0.1" placeholder="幅" oninput="updateDrawing()">
+        <span>/</span>
+        <input type="number" id="ring-thick" value="1.5" step="0.1" placeholder="厚み" oninput="updateDrawing()">
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label>素材（地金カラー）</label>
+      <select id="ring-material" onchange="updateDrawing()">
+        <option value="platinum">プラチナ / シルバー (銀色)</option>
+        <option value="gold">イエローゴールド (金色)</option>
+      </select>
     </div>
   </div>
 
-  <!-- 4. 実物大補正 -->
+  <!-- 実物大調整（キャリブレーション） -->
   <div id="tab-calib" class="tab-content">
     <div class="calib-box">
-      <p style="font-size: 13px; color: #444; line-height: 1.5;">画面に手元の定規を当て、下の青い線が**ピッタリ5cm（50mm）**になるようにスライダーで微調整してください。</p>
-      
-      <div class="ruler-container">
-        <span class="ruler-label">◀ 50 mm (5 cm) ▶</span>
-        <div id="ruler" class="ruler-line" style="width: 189px;"></div>
+      <label>調整基準の選択</label>
+      <div class="calib-mode-tabs">
+        <button id="mode-card-btn" class="calib-mode-btn active" onclick="setCalibMode('card')">💳 カード（片側合わせ）</button>
+        <button id="mode-ruler-btn" class="calib-mode-btn" onclick="setCalibMode('ruler')">📏 定規（5cm）</button>
       </div>
-      
-      <div class="form-group" style="margin-top: 20px;">
-        <label>微調整 (Px/mm 補正)</label>
-        <input type="range" id="calib-slider" min="2.0" max="8.0" step="0.01" value="3.78" oninput="onCalibChange(this.value)">
+
+      <div id="calib-guide-container">
+        <div id="guide-card">
+          <p style="font-size:11px; color:#555; margin-bottom:6px;">カードの<b>左端を赤い線</b>に当て、<b>右端が青い線</b>に重なるよう右下のボタンで微調整してください。</p>
+          <div id="card-box" class="calib-line-card"></div>
+        </div>
+        <div id="guide-ruler" style="display:none;">
+          <p style="font-size:11px; color:#555; margin-bottom:6px;">実際の定規の <b>50mm (5cm)</b> と長さを合わせてください。</p>
+          <div id="ruler-box" class="calib-line-ruler"></div>
+        </div>
       </div>
-      <button class="btn-toggle active" style="width: 100%; padding: 12px; font-size: 14px; margin-top: 10px;" onclick="saveCalibration()">補正値を保存</button>
+
+      <div class="form-group" style="margin-top:10px;">
+        <label>補正値微調整 (px/mm)</label>
+        <div class="form-row">
+          <button class="btn-step" onclick="stepCalib(-0.02)">－</button>
+          <input type="range" id="calib-slider" min="2.0" max="6.0" step="0.01" value="3.78" oninput="onCalibChange(this.value)">
+          <button class="btn-step" onclick="stepCalib(0.02)">＋</button>
+        </div>
+      </div>
+
+      <button class="btn active" style="width:100%; margin-top:8px;" onclick="saveCalibration()">この補正値を保存</button>
+    </div>
+
+    <div class="form-group">
+      <label>拡大 / 縮小表示: <span id="zoom-val">100</span>%</label>
+      <div class="form-row">
+        <input type="range" id="zoom-slider" min="50" max="200" value="100" oninput="onZoomChange(this.value)">
+        <button class="btn" style="flex:0 0 50px; padding:4px;" onclick="resetZoom()">100%</button>
+      </div>
     </div>
   </div>
 </div>
+
 <script>
   let pxPerMm = parseFloat(localStorage.getItem('gem_px_per_mm')) || 3.78;
   let currentZoom = 1.0;
   let currentView = 'front';
-  let selectedColorKey = 'lightblue';
+  let selectedColorKey = 'paraiba';
   let currentAngle = 0;
+  let calibMode = 'card';
 
   const colorMap = {
-    lightblue:  { fill: '#70d6ff', stroke: '#0077b6' },
-    blue:       { fill: '#0077b6', stroke: '#03045e' },
-    green:      { fill: '#2a9d8f', stroke: '#134e4a' },
-    lightgreen: { fill: '#9bdeac', stroke: '#2d6a4f' },
-    yellow:     { fill: '#ffee32', stroke: '#d4a373' },
-    orange:     { fill: '#f4a261', stroke: '#e76f51' },
-    red:        { fill: '#e63946', stroke: '#9bf6ff' },
-    pink:       { fill: '#ff85a1', stroke: '#c77dff' },
-    purple:     { fill: '#9d4edd', stroke: '#5a189a' },
-    white:      { fill: '#f8f9fa', stroke: '#a0a0a0' }
+    ruby:       { fill: '#d90429', stroke: '#800f2f', name: 'ルビー (赤)' },
+    paraiba:    { fill: '#4ea8de', stroke: '#0077b6', name: 'パライバトルマリン (水色)' },
+    emerald:    { fill: '#2d6a4f', stroke: '#1b4332', name: 'エメラルド (緑)' },
+    sphene:     { fill: '#d4a373', stroke: '#bc6c25', name: 'スフェーン (黄)' },
+    sapphire:   { fill: '#1d3557', stroke: '#0b090a', name: 'ロイヤルブルーサファイア (青)' },
+    padparadscha:{ fill: '#f28482', stroke: '#c9184a', name: 'パパラチアサファイア (ピンク)' },
+    mint:       { fill: '#95d5b2', stroke: '#40916c', name: 'ミントガーネット (黄緑)' },
+    amethyst:   { fill: '#7209b7', stroke: '#3a0ca3', name: 'アメジスト (紫)' },
+    mari:       { fill: '#e07a5f', stroke: '#9d4edd', name: 'マリガーネット (オレンジ)' },
+    white:      { fill: '#f8f9fa', stroke: '#adb5bd', name: 'クリア/ダイヤ (白)' }
   };
 
   function getRingInnerDiameter(size) {
@@ -260,10 +212,31 @@
   }
 
   window.onload = () => {
+    buildColorPalette();
     document.getElementById('calib-slider').value = pxPerMm;
-    updateRulerWidth();
+    updateCalibGuides();
     updateDrawing();
   };
+
+  function buildColorPalette() {
+    const palette = document.getElementById('color-palette');
+    palette.innerHTML = '';
+    const select = document.getElementById('gem-color-select');
+    select.innerHTML = '';
+
+    Object.keys(colorMap).forEach(key => {
+      const opt = document.createElement('option');
+      opt.value = key; opt.innerText = colorMap[key].name;
+      select.appendChild(opt);
+
+      const btn = document.createElement('button');
+      btn.className = `color-btn ${key === selectedColorKey ? 'active' : ''}`;
+      btn.style.backgroundColor = colorMap[key].fill;
+      btn.title = colorMap[key].name;
+      btn.onclick = () => selectColor(key);
+      palette.appendChild(btn);
+    });
+  }
 
   function switchTab(tabName) {
     document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
@@ -283,6 +256,7 @@
   function selectColor(colorKey) {
     selectedColorKey = colorKey;
     document.getElementById('gem-color-select').value = colorKey;
+    buildColorPalette();
     updateDrawing();
   }
 
@@ -291,7 +265,6 @@
     document.getElementById('angle-val').innerText = val;
     updateDrawing();
   }
-
   function resetAngle() {
     document.getElementById('gem-angle').value = 0;
     onAngleChange(0);
@@ -302,22 +275,38 @@
     document.getElementById('zoom-val').innerText = val;
     updateDrawing();
   }
-  function setZoom(val) {
-    document.getElementById('zoom-slider').value = val;
-    onZoomChange(val);
-  }
   function resetZoom() {
-    setZoom(100);
+    document.getElementById('zoom-slider').value = 100;
+    onZoomChange(100);
+  }
+
+  function setCalibMode(mode) {
+    calibMode = mode;
+    document.getElementById('mode-card-btn').classList.toggle('active', mode === 'card');
+    document.getElementById('mode-ruler-btn').classList.toggle('active', mode === 'ruler');
+    document.getElementById('guide-card').style.display = mode === 'card' ? 'block' : 'none';
+    document.getElementById('guide-ruler').style.display = mode === 'ruler' ? 'block' : 'none';
+    updateCalibGuides();
   }
 
   function onCalibChange(val) {
     pxPerMm = parseFloat(val);
-    updateRulerWidth();
+    updateCalibGuides();
     updateDrawing();
   }
-  function updateRulerWidth() {
-    document.getElementById('ruler').style.width = (50 * pxPerMm) + 'px';
+
+  function stepCalib(delta) {
+    pxPerMm = Math.max(2.0, Math.min(6.0, pxPerMm + delta));
+    document.getElementById('calib-slider').value = pxPerMm;
+    updateCalibGuides();
+    updateDrawing();
   }
+
+  function updateCalibGuides() {
+    document.getElementById('card-box').style.width = (85.6 * pxPerMm) + 'px';
+    document.getElementById('ruler-box').style.width = (50.0 * pxPerMm) + 'px';
+  }
+
   function saveCalibration() {
     localStorage.setItem('gem_px_per_mm', pxPerMm);
     alert('実物大の補正値を保存しました！');
@@ -333,8 +322,8 @@
 
     const shape = document.getElementById('gem-shape').value;
     const l = parseFloat(document.getElementById('gem-length').value) || 8.0;
-    const w = parseFloat(document.getElementById('gem-width').value) || 6.0;
-    const h = parseFloat(document.getElementById('gem-height').value) || 4.0;
+    const w = parseFloat(document.getElementById('gem-width').value) || 4.0;
+    const h = parseFloat(document.getElementById('gem-height').value) || 3.0;
 
     const showRing = document.getElementById('ring-enable').value === 'true';
     const ringSize = parseFloat(document.getElementById('ring-size').value) || 11;
@@ -369,8 +358,8 @@
       const gemGroup = document.createElementNS("http://www.w3.org/2000/svg", "g");
       gemGroup.setAttribute("transform", `rotate(${currentAngle}, ${cx}, ${cy})`);
 
-      const pw = (shape === 'round' ? w : w) * scale;
-      const pl = (shape === 'round' ? w : l) * scale;
+      const pw = w * scale;
+      const pl = l * scale;
       const rx = pw / 2;
       const ry = pl / 2;
 
@@ -395,11 +384,10 @@
         gem.setAttribute("stroke", gemStroke); gem.setAttribute("stroke-width", "1.5");
         gemGroup.appendChild(gem);
       } else if (shape === 'heart') {
-        // 上下の山・先端が『指定した縦幅(l)・横幅(w)』の枠いっぱいにぴったり接する厳密計算
-        const topY = cy - ry;       // 最上部（左右の丸みの頂点）
-        const bottomY = cy + ry;    // 最下部（ハートの先端）
-        const r = rx / 2;           // 左右の円の半径
-        const notchY = topY + r;    // 中央のくぼみのY座標
+        const topY = cy - ry;
+        const bottomY = cy + ry;
+        const r = rx / 2;
+        const notchY = topY + r;
 
         pathData = `M ${cx} ${notchY}
                     A ${r} ${r} 0 0 1 ${cx + rx} ${notchY}
@@ -407,10 +395,9 @@
                     Q ${cx - rx} ${cy + ry * 0.4}, ${cx - rx} ${notchY}
                     A ${r} ${r} 0 0 1 ${cx} ${notchY} Z`;
       } else if (shape === 'marquise') {
-        // 横幅(w)・縦幅(l)の枠ぴったりに収まるマーキス描画計算
         pathData = `M ${cx} ${cy - ry}
-                    Q ${cx + rx * 2.0} ${cy}, ${cx} ${cy + ry}
-                    Q ${cx - rx * 2.0} ${cy}, ${cx} ${cy - ry} Z`;
+                    Q ${cx + rx * 1.414} ${cy}, ${cx} ${cy + ry}
+                    Q ${cx - rx * 1.414} ${cy}, ${cx} ${cy - ry} Z`;
       } else if (shape === 'pear') {
         pathData = `M ${cx} ${cy - ry}
                     C ${cx + rx * 1.2} ${cy + ry * 0.3}, ${cx + rx} ${cy + ry}, ${cx} ${cy + ry}
