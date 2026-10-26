@@ -66,20 +66,20 @@
     }
     .color-btn.active { border-color: #007aff; box-shadow: 0 0 0 2px rgba(0,122,255,0.3); }
 
-    /* キャリブレーション専用 */
-    .calib-box { background: #fff; padding: 20px 16px; border-radius: 12px; border: 1px solid #e0e0e0; text-align: center; }
+    /* キャリブレーション専用（左固定・間隔広め） */
+    .calib-box { background: #fff; padding: 20px 16px; border-radius: 12px; border: 1px solid #e0e0e0; }
     .ruler-container {
-      margin: 25px auto 35px auto;
-      padding: 15px 0;
+      margin: 10px 0 25px 0;
+      padding: 15px 10px;
       background: #fafafa;
       border-radius: 8px;
       border: 1px dashed #ccc;
       display: flex;
       flex-direction: column;
-      align-items: center;
+      align-items: flex-start; /* 左寄せ（左固定）に変更 */
     }
-    .ruler-label { font-size: 11px; color: #007aff; font-weight: bold; margin-bottom: 6px; }
-    .ruler-line { height: 10px; background: #007aff; border-radius: 5px; position: relative; }
+    .ruler-label { font-size: 11px; color: #007aff; font-weight: bold; margin-bottom: 6px; align-self: center; }
+    .ruler-line { height: 10px; background: #007aff; border-radius: 0 5px 5px 0; position: relative; }
   </style>
 </head>
 <body>
@@ -134,7 +134,6 @@
       </div>
     </div>
 
-    <!-- 傾き（360度対応） -->
     <div class="form-group">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
         <label style="margin-bottom: 0;">傾き (角度): <span id="angle-val">0</span>°</label>
@@ -217,17 +216,20 @@
     </div>
   </div>
 
-  <!-- 4. 実物大補正 -->
+  <!-- 4. 実物大補正（ご要望反映版） -->
   <div id="tab-calib" class="tab-content">
     <div class="calib-box">
-      <p style="font-size: 13px; color: #444; line-height: 1.5;">画面に手元の定規を当て、下の青い線が**ピッタリ5cm（50mm）**になるようにスライダーで微調整してください。</p>
-      
+      <!-- 1. 一番上にバーを配置 -->
       <div class="ruler-container">
-        <span class="ruler-label">◀ 50 mm (5 cm) ▶</span>
+        <span class="ruler-label">◀ 50 mm (5 cm) [左端基準] ▶</span>
         <div id="ruler" class="ruler-line" style="width: 189px;"></div>
       </div>
       
-      <div class="form-group" style="margin-top: 20px;">
+      <!-- 2. その次に説明文 -->
+      <p style="font-size: 13px; color: #444; line-height: 1.5; margin-bottom: 25px;">画面の左端に手元の定規の「0」を合わせ、下のスライダーで青い線の右端が**ピッタリ5cm（50mm）**になるように微調整してください。</p>
+      
+      <!-- 3. 間隔をあけて微調整スライダー -->
+      <div class="form-group">
         <label>微調整 (Px/mm 補正)</label>
         <input type="range" id="calib-slider" min="2.0" max="8.0" step="0.01" value="3.78" oninput="onCalibChange(this.value)">
       </div>
@@ -235,6 +237,7 @@
     </div>
   </div>
 </div>
+
 <script>
   let pxPerMm = parseFloat(localStorage.getItem('gem_px_per_mm')) || 3.78;
   let currentZoom = 1.0;
@@ -316,6 +319,7 @@
     updateDrawing();
   }
   function updateRulerWidth() {
+    // 左固定で右側にのみバーが伸びるように調整
     document.getElementById('ruler').style.width = (50 * pxPerMm) + 'px';
   }
   function saveCalibration() {
@@ -369,8 +373,8 @@
       const gemGroup = document.createElementNS("http://www.w3.org/2000/svg", "g");
       gemGroup.setAttribute("transform", `rotate(${currentAngle}, ${cx}, ${cy})`);
 
-      const pw = (shape === 'round' ? w : w) * scale;
-      const pl = (shape === 'round' ? w : l) * scale;
+      const pw = w * scale;
+      const pl = l * scale;
       const rx = pw / 2;
       const ry = pl / 2;
 
@@ -395,11 +399,10 @@
         gem.setAttribute("stroke", gemStroke); gem.setAttribute("stroke-width", "1.5");
         gemGroup.appendChild(gem);
       } else if (shape === 'heart') {
-        // 上下の山・先端が『指定した縦幅(l)・横幅(w)』の枠いっぱいにぴったり接する厳密計算
-        const topY = cy - ry;       // 最上部（左右の丸みの頂点）
-        const bottomY = cy + ry;    // 最下部（ハートの先端）
-        const r = rx / 2;           // 左右の円の半径
-        const notchY = topY + r;    // 中央のくぼみのY座標
+        const topY = cy - ry;
+        const bottomY = cy + ry;
+        const r = rx / 2;
+        const notchY = topY + r;
 
         pathData = `M ${cx} ${notchY}
                     A ${r} ${r} 0 0 1 ${cx + rx} ${notchY}
@@ -451,7 +454,7 @@
         Z
       `;
 
-      if (showRing) {
+  if (showRing) {
         const innerDiameter = getRingInnerDiameter(ringSize);
         const outerDiameter = innerDiameter + (ringThick * 2);
 
