@@ -66,20 +66,25 @@
     }
     .color-btn.active { border-color: #007aff; box-shadow: 0 0 0 2px rgba(0,122,255,0.3); }
 
-    /* キャリブレーション専用（左固定・間隔広め） */
+    /* キャリブレーション専用（微調整バーをさらに下に配置） */
     .calib-box { background: #fff; padding: 20px 16px; border-radius: 12px; border: 1px solid #e0e0e0; }
     .ruler-container {
-      margin: 10px 0 25px 0;
+      margin: 10px 0 15px 0;
       padding: 15px 10px;
       background: #fafafa;
       border-radius: 8px;
       border: 1px dashed #ccc;
       display: flex;
       flex-direction: column;
-      align-items: flex-start; /* 左寄せ（左固定）に変更 */
+      align-items: flex-start;
     }
     .ruler-label { font-size: 11px; color: #007aff; font-weight: bold; margin-bottom: 6px; align-self: center; }
     .ruler-line { height: 10px; background: #007aff; border-radius: 0 5px 5px 0; position: relative; }
+    
+    /* 微調整エリアを下に下げるための余白用クラス */
+    .calib-spacer {
+      height: 40px; /* およそ2センチ分の余白 */
+    }
   </style>
 </head>
 <body>
@@ -216,24 +221,27 @@
     </div>
   </div>
 
-  <!-- 4. 実物大補正（ご要望反映版） -->
+  <!-- 4. 実物大補正（微調整バーを約2cm下げたレイアウト） -->
   <div id="tab-calib" class="tab-content">
     <div class="calib-box">
-      <!-- 1. 一番上にバーを配置 -->
+      <!-- 1. 一番上のバー -->
       <div class="ruler-container">
         <span class="ruler-label">◀ 50 mm (5 cm) [左端基準] ▶</span>
         <div id="ruler" class="ruler-line" style="width: 189px;"></div>
       </div>
       
-      <!-- 2. その次に説明文 -->
-      <p style="font-size: 13px; color: #444; line-height: 1.5; margin-bottom: 25px;">画面の左端に手元の定規の「0」を合わせ、下のスライダーで青い線の右端が**ピッタリ5cm（50mm）**になるように微調整してください。</p>
+      <!-- 2. その下の説明文 -->
+      <p style="font-size: 13px; color: #444; line-height: 1.5; margin-bottom: 10px;">画面の左端に手元の定規の「0」を合わせ、下のスライダーで青い線の右端が**ピッタリ5cm（50mm）**になるように微調整してください。</p>
       
-      <!-- 3. 間隔をあけて微調整スライダー -->
+      <!-- 3. 約2センチ分の余白スペース -->
+      <div class="calib-spacer"></div>
+
+      <!-- 4. 下に下がった微調整スライダー -->
       <div class="form-group">
         <label>微調整 (Px/mm 補正)</label>
         <input type="range" id="calib-slider" min="2.0" max="8.0" step="0.01" value="3.78" oninput="onCalibChange(this.value)">
       </div>
-      <button class="btn-toggle active" style="width: 100%; padding: 12px; font-size: 14px; margin-top: 10px;" onclick="saveCalibration()">補正値を保存</button>
+      <button class="btn-toggle active" style="width: 100%; padding: 12px; font-size: 14px; margin-top: 15px;" onclick="saveCalibration()">補正値を保存</button>
     </div>
   </div>
 </div>
@@ -319,7 +327,6 @@
     updateDrawing();
   }
   function updateRulerWidth() {
-    // 左固定で右側にのみバーが伸びるように調整
     document.getElementById('ruler').style.width = (50 * pxPerMm) + 'px';
   }
   function saveCalibration() {
@@ -454,7 +461,7 @@
         Z
       `;
 
-  if (showRing) {
+if (showRing) {
         const innerDiameter = getRingInnerDiameter(ringSize);
         const outerDiameter = innerDiameter + (ringThick * 2);
 
